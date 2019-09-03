@@ -5,9 +5,9 @@ const cors = require('cors')
 const helmet = require('helmet')
 const { NODE_ENV } = require('./config')
 const uuid = require('uuid/v4');
-
+const bodyParser = express.json();
+const bookmarksRouter = express.Router()
 const app = express()
-
 const arrayOfBookmarks= 
   [
 		{
@@ -31,16 +31,48 @@ const morganOption = (NODE_ENV === 'production')
 app.use(morgan(morganOption))
 app.use(helmet())
 app.use(cors())
-app.use(express.json());
 
-app.get('/bookmarks', (req, res) => {
-  res.json(arrayOfBookmarks)
-})
 
-app.get('/bookmarks/:id', (req, res) => {
-	const { id } = req.params
+bookmarksRouter
+  .route('/bookmarks')
+  .get((req, res) => {
+    res.json(arrayOfBookmarks)
+  })
+  .post(bodyParser, (req, res) => {
+    for (const field of ['title', 'url', 'rating']) {
+      if (!req.body[field]) {
+        logger.error(`${field} is required`)
+        return res.status(400).send(`'${field}' is required`)
+      }
+    }
+    const { title, url, description, rating } = req.body
+
+    if (!Number.isInteger(rating) || rating < 0 || rating > 5) {
+      logger.error(`Invalid rating '${rating}' supplied`)
+      return res.status(400).send(`'rating' must be a number between 0 and 5`)
+    }
+
+    if (!isWebUri(url)) {
+      logger.error(`Invalid url '${url}' supplied`)
+      return res.status(400).send(`'url' must be a valid URL`)
+    }
+
+    const bookmark = { id: uuid(), title, url, description, rating }
+
+    store.bookmarks.push(bookmark)
+
+    logger.info(`Bookmark with id ${bookmark.id} created`)
+    res
+      .status(201)
+      .location(`http://localhost:8000/bookmarks/${bookmark.id}`)
+      .json(bookmark)
+  })
+bookmarksRouter
+  .route('/bookmarks/:bookmark_id') 
+  .get((req, res) => {
+	const { bookmark_id } = req.params
 	for (let i = 0 ; i < arrayOfBookmarks.length; i++) {
-		if (id === arrayOfBookmarks[i].id) {
+		if (bookmark_id === arrayOfBookmarks[i].bookmark_id) {
 			res.json(arrayOfBookmarks[i])
 		}	
 	}
@@ -49,52 +81,24 @@ app.get('/bookmarks/:id', (req, res) => {
 			.send("Not Found");
 })
 
-app.post('/bookmarks', (req, res) => {
-  const { title, url, description } = req.body;
+.delete((req, res) => {
+  const { bookmark_id } = req.params
 
-  if (!title) {
+  const bookmarkIndex = store.bookmarks.findIndex(b => b.id === bookmark_id)
+
+  if (bookmarkIndex === -1) {
+    logger.error(`Bookmark with id ${bookmark_id} not found.`)
     return res
-      .status(400)
-      .send("Invalid data");
-  }
-  if(!url) {
-    return res 
-      .status(400)
-      .send("Invalid data");
-  }
-  if(!description) {
-    return res 
-      .status(400)
-      .send("Invalid data");
+      .status(404)
+      .send('Bookmark Not Found')
   }
 
-  const id = uuid();
+  store.bookmarks.splice(bookmarkIndex, 1)
 
-  const bookmark = {
-    title,
-    url,
-    description,
-    id: uuid()
-  };
-
-  store.bookmarks.push(bookmark)
-
-  logger.info(`Bookmark with id ${bookmark.id} created`)
-    res
-      .status(201)
-      .location(`http://localhost:8000/bookmarks/${bookmark.id}`)
-      .json(bookmark)
-})
-
-app.use(function errorHandler(error, req, res, next) {
-    let response
-    if (NODE_ENV === 'production') {
-        response = { error: { message: 'server error' } }
-    } else {
-        console.error(error)
-        response = { message: error.message, error }
-    }
-    res.status(500).json(response)
+  logger.info(`Bookmark with id ${bookmark_id} deleted.`)
+  res
+    .status(204)
+    .end()
 })
 
 module.exports = app
