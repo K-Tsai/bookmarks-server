@@ -7,6 +7,14 @@ const { NODE_ENV } = require('./config')
 const uuid = require('uuid/v4');
 const bodyParser = express.json();
 const bookmarksRouter = express.Router()
+const winston = require('winston');
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+      new winston.transports.File({ filename: 'info.log' })
+  ]
+})
 const app = express()
 const arrayOfBookmarks= 
   [
@@ -51,15 +59,15 @@ bookmarksRouter
       logger.error(`Invalid rating '${rating}' supplied`)
       return res.status(400).send(`'rating' must be a number between 0 and 5`)
     }
-
+/*
     if (!isWebUri(url)) {
       logger.error(`Invalid url '${url}' supplied`)
       return res.status(400).send(`'url' must be a valid URL`)
     }
-
+*/
     const bookmark = { id: uuid(), title, url, description, rating }
 
-    store.bookmarks.push(bookmark)
+    arrayOfBookmarks.push(bookmark)
 
     logger.info(`Bookmark with id ${bookmark.id} created`)
     res
@@ -84,7 +92,7 @@ bookmarksRouter
 .delete((req, res) => {
   const { bookmark_id } = req.params
 
-  const bookmarkIndex = store.bookmarks.findIndex(b => b.id === bookmark_id)
+  const bookmarkIndex = arrayOfBookmarks.findIndex(b => b.id === bookmark_id)
 
   if (bookmarkIndex === -1) {
     logger.error(`Bookmark with id ${bookmark_id} not found.`)
@@ -93,7 +101,7 @@ bookmarksRouter
       .send('Bookmark Not Found')
   }
 
-  store.bookmarks.splice(bookmarkIndex, 1)
+  arrayOfBookmarks.splice(bookmarkIndex, 1)
 
   logger.info(`Bookmark with id ${bookmark_id} deleted.`)
   res
@@ -101,4 +109,5 @@ bookmarksRouter
     .end()
 })
 
-module.exports = app
+app.use(bookmarksRouter);
+module.exports = app;

@@ -1,0 +1,5 @@
+{"message":"rating is required","level":"error"}
+{"message":"Bookmark with id ca178106-f6c4-45c9-b6b6-a1f11fdb63d6 created","level":"info"}
+{"message":"Bookmark with id \"ca178106-f6c4-45c9-b6b6-a1f11fdb63d6\" not found.","level":"error"}
+{"message":"Bookmark with id ca178106-f6c4-45c9-b6b6-a1f11fdb63d6 not found.","level":"error"}
+{"message":"Bookmark with id 63e6f383-7b17-46e2-b2d1-73c1bea09ac4 deleted.","level":"info"}
